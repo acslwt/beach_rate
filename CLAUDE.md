@@ -22,17 +22,47 @@ Single-page Flutter app. No routing, no state management library.
 ```
 lib/
   main.dart              # PlageApp (MaterialApp) → SummerMapPage
-  summer_map_page.dart   # The entire UI: map + header + button + marker
+  summer_map_page.dart   # Entire UI: map + search + weather pill + button + marker
 ```
 
 ### `summer_map_page.dart` structure
 
-- `SummerMapPage` (StatefulWidget) owns `MapController`, GPS state (`_userLocation`, `_isLocating`), and button-press animation state.
-- `_fetchLocation()` requests GPS via `geolocator`. On success it calls `_finishLocating(loc)`; on any failure/denial it calls `_finishLocating(null)`. No `timeLimit` is set — GPS is allowed to take as long as needed.
-- `_finishLocating()` updates state and moves the map with `WidgetsBinding.addPostFrameCallback` (not `Future.delayed`) so the `MapController` is guaranteed to be attached.
-- Build is split into three private methods: `_buildMap()`, `_buildHeader()`, `_buildButton()`.
-- The `Stack` uses `fit: StackFit.expand` so `FlutterMap` fills the screen as a direct child (no `Positioned.fill` wrapper needed).
-- `_PulsingMarker` is a private `StatefulWidget` at the bottom of the file.
+Top-level symbols (in order):
+
+| Symbol | Type | Role |
+|---|---|---|
+| `_sunYellow/Orange/amberText/grey*/ink` | `const Color` | Design tokens — all colors defined here, never inline |
+| `_greyscale` | `const ColorFilter` | Luminance matrix applied to suggestion emojis |
+| `_defaultCenter` | `const LatLng` | Paris fallback when GPS unavailable |
+| `_Place` | `class` | Nominatim result: `name`, `lat`, `lon` |
+| `SummerMapPage` | `StatefulWidget` | Root page widget |
+| `_GlassContainer` | `StatelessWidget` | Shared glassmorphism card (backdrop blur + white border + shadow) |
+| `_PulsingMarker` | `StatefulWidget` | Animated orange dot on user position |
+
+**`_SummerMapPageState` state buckets:**
+- **Map**: `_mapController`, `_center`, `_userLocation`, `_isLocating`, `_buttonPressed`
+- **Search**: `_searchCtrl`, `_searchFocus`, `_searchFocused`, `_places`, `_searching`, `_debounce`
+
+**Build methods chain:**
+```
+build()
+ ├── _buildMap()            # FlutterMap + TileLayer + MarkerLayer
+ ├── _buildTopOverlay()     # Positioned(top) containing:
+ │    ├── _buildSearchBar() # glassmorphism input (top)
+ │    ├── _buildDropdown()  # AnimatedSize wrapper → suggestions OR results
+ │    │    ├── _buildSuggestions()  # 4 grey chips with greyscale emoji
+ │    │    └── _buildResults()      # Nominatim list / spinner / empty state
+ │    └── _buildWeatherPill()       # "😊 Temps ensoleillé" (below search)
+ └── _buildButton()         # Positioned(bottom) "Je suis ici" pill
+```
+
+**Search flow:**
+1. `_onSearchChanged()` → debounce 450 ms → `_doSearch()` (Nominatim HTTPS, no API key)
+2. Suggestion chip tap → `_tapSuggestion()` → immediate `_doSearch()` (no debounce)
+3. Result tap → `_selectPlace()` → `_mapController.move()` + unfocus + clear
+4. Map tap / pan → `_searchFocus.unfocus()` via `MapOptions.onTap` + `onPositionChanged`
+
+**`_GlassContainer`**: accepts `radius`, `padding`, `bg`, `shadowColor` — use it for every overlay surface to keep glass style consistent.
 
 ### Key dependencies
 
@@ -42,6 +72,7 @@ lib/
 | `latlong2` | `LatLng` coordinate type used by flutter_map |
 | `geolocator` | Device GPS / location permission |
 | `google_fonts` | Nunito font (playful summer style) |
+| `http` | Nominatim geocoding requests (declared explicitly, also a transitive dep of flutter_map) |
 
 ### Platform setup
 
@@ -52,12 +83,15 @@ lib/
 ### Design tokens (summer palette)
 
 ```dart
-const Color _sunYellow = Color(0xFFFBBF24);
-const Color _sunOrange = Color(0xFFF97316);
-const Color _amberText  = Color(0xFF92400E);
+const Color _sunYellow = Color(0xFFFBBF24); // button gradient start
+const Color _sunOrange = Color(0xFFF97316); // button gradient end, markers, spinner
+const Color _amberText = Color(0xFF92400E); // weather pill text
+const Color _grey500   = Color(0xFF6B7280); // search icons, hint, chip labels
+const Color _grey200   = Color(0xFFE5E7EB); // chip backgrounds, dividers
+const Color _ink       = Color(0xFF374151); // search input text, result names
 ```
 
-Font: **Nunito w800** for all visible text. OSM tile URL: `https://tile.openstreetmap.org/{z}/{x}/{y}.png`.
+Font: **Nunito w800** for all visible text (w600 for search input, w700 for chip labels, w500 for hints). OSM tile URL: `https://tile.openstreetmap.org/{z}/{x}/{y}.png`. Nominatim geocoding: `https://nominatim.openstreetmap.org/search` — `accept-language: fr`, `limit: 5`, `User-Agent` header required.
 
 ## Lint
 
