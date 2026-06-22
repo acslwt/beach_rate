@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,23 +10,22 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Design tokens
+//  Design tokens — Playful Minimalist palette
 // ─────────────────────────────────────────────────────────────────────────────
-const Color _sunYellow = Color(0xFFFBBF24);
-const Color _sunOrange = Color(0xFFF97316);
-const Color _amberText = Color(0xFF92400E);
-const Color _grey500   = Color(0xFF6B7280);
-const Color _grey200   = Color(0xFFE5E7EB);
-const Color _ink       = Color(0xFF374151);
-const LatLng _defaultCenter = LatLng(48.8566, 2.3522);
+const Color _coral     = Color(0xFFFF8C69); // primary: button, accents, marker
+const Color _peach     = Color(0xFFFFDDD0); // button hover / chip tints
+const Color _cream     = Color(0xFFFFF8F5); // card / pill background
+const Color _inkDark   = Color(0xFF2C2C2C); // main text
+const Color _inkMid    = Color(0xFFADB5BD); // hints, secondary text, icons
+const Color _divider   = Color(0xFFF0EDE8); // list dividers
 
-// Grayscale ColorFilter used on suggestion emojis
-const ColorFilter _greyscale = ColorFilter.matrix([
-  0.2126, 0.7152, 0.0722, 0, 0,
-  0.2126, 0.7152, 0.0722, 0, 0,
-  0.2126, 0.7152, 0.0722, 0, 0,
-  0,      0,      0,      1, 0,
-]);
+// Per-chip pastel backgrounds (colorful, warm, playful)
+const Color _chipBeach  = Color(0xFFFFE8C8);
+const Color _chipPool   = Color(0xFFBFDFFF);
+const Color _chipLake   = Color(0xFFBDF5D6);
+const Color _chipRiver  = Color(0xFFCDE8FF);
+
+const LatLng _defaultCenter = LatLng(48.8566, 2.3522);
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Model
@@ -65,11 +63,12 @@ class _SummerMapPageState extends State<SummerMapPage> {
   bool _searching = false;
   Timer? _debounce;
 
-  static const List<(String emoji, String label, String query)> _kSuggestions = [
-    ('🏖️', 'Plage',   'plage'),
-    ('🏊', 'Piscine', 'piscine'),
-    ('🏞️', 'Lac',     'lac'),
-    ('🌊', 'Rivière', 'rivière'),
+  static const List<(String emoji, String label, String query, Color bg)>
+      _kSuggestions = [
+    ('🏖️', 'Plage',   'plage',   _chipBeach),
+    ('🏊', 'Piscine', 'piscine', _chipPool),
+    ('🏞️', 'Lac',     'lac',     _chipLake),
+    ('🌊', 'Rivière', 'rivière', _chipRiver),
   ];
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -80,7 +79,7 @@ class _SummerMapPageState extends State<SummerMapPage> {
     _searchFocus.addListener(
       () => setState(() => _searchFocused = _searchFocus.hasFocus),
     );
-    _searchCtrl.addListener(() => setState(() {})); // rebuild on text change
+    _searchCtrl.addListener(() => setState(() {}));
   }
 
   @override
@@ -106,7 +105,8 @@ class _SummerMapPageState extends State<SummerMapPage> {
         return _finishLocating(null);
       }
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
       );
       _finishLocating(LatLng(pos.latitude, pos.longitude));
     } catch (_) {
@@ -138,7 +138,10 @@ class _SummerMapPageState extends State<SummerMapPage> {
   void _onSearchChanged(String query) {
     _debounce?.cancel();
     if (query.trim().isEmpty) {
-      setState(() { _places = []; _searching = false; });
+      setState(() {
+        _places = [];
+        _searching = false;
+      });
       return;
     }
     setState(() => _searching = true);
@@ -185,7 +188,10 @@ class _SummerMapPageState extends State<SummerMapPage> {
     _searchCtrl.text = keyword;
     _searchCtrl.selection =
         TextSelection.collapsed(offset: keyword.length);
-    setState(() { _places = []; _searching = true; });
+    setState(() {
+      _places = [];
+      _searching = true;
+    });
     _doSearch(keyword);
   }
 
@@ -200,7 +206,10 @@ class _SummerMapPageState extends State<SummerMapPage> {
   void _clearSearch() {
     _searchCtrl.clear();
     _searchFocus.unfocus();
-    setState(() { _places = []; _searching = false; });
+    setState(() {
+      _places = [];
+      _searching = false;
+    });
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -226,7 +235,8 @@ class _SummerMapPageState extends State<SummerMapPage> {
       options: MapOptions(
         initialCenter: _center,
         initialZoom: 15.0,
-        interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
+        interactionOptions:
+            const InteractionOptions(flags: InteractiveFlag.all),
         onTap: (tapPos, point) => _searchFocus.unfocus(),
         onPositionChanged: (camera, hasGesture) {
           if (hasGesture) _searchFocus.unfocus();
@@ -253,7 +263,7 @@ class _SummerMapPageState extends State<SummerMapPage> {
     );
   }
 
-  // ── Top overlay (weather pill + search bar + dropdown) ─────────────────────
+  // ── Top overlay ────────────────────────────────────────────────────────────
   Widget _buildTopOverlay() {
     return Positioned(
       top: 0,
@@ -286,30 +296,30 @@ class _SummerMapPageState extends State<SummerMapPage> {
   }
 
   Widget _buildWeatherPill() {
-    return _GlassContainer(
-      radius: 22,
+    return _Card(
+      radius: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('😊', style: TextStyle(fontSize: 24)),
-          const SizedBox(width: 10),
+          const Text('☀️', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 8),
           Text(
             'Temps ensoleillé',
             style: GoogleFonts.nunito(
-              fontSize: 17,
+              fontSize: 15,
               fontWeight: FontWeight.w800,
-              color: _amberText,
-              letterSpacing: 0.1,
+              color: _coral,
             ),
           ),
           if (_isLocating) ...[
             const SizedBox(width: 10),
             const SizedBox(
-              width: 14,
-              height: 14,
+              width: 13,
+              height: 13,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: _sunOrange,
+                color: _coral,
               ),
             ),
           ],
@@ -320,16 +330,15 @@ class _SummerMapPageState extends State<SummerMapPage> {
 
   Widget _buildSearchBar() {
     final hasText = _searchCtrl.text.isNotEmpty;
-    return _GlassContainer(
-      radius: 16,
+    return _Card(
+      radius: 20,
       padding: EdgeInsets.zero,
-      shadowColor: Colors.black.withValues(alpha: 0.06),
       child: SizedBox(
-        height: 52,
+        height: 54,
         child: Row(
           children: [
-            const SizedBox(width: 14),
-            Icon(Icons.search_rounded, color: _grey500, size: 20),
+            const SizedBox(width: 16),
+            const Icon(Icons.search_rounded, color: _inkMid, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
@@ -340,16 +349,16 @@ class _SummerMapPageState extends State<SummerMapPage> {
                 onSubmitted: _doSearch,
                 style: GoogleFonts.nunito(
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: _ink,
+                  fontWeight: FontWeight.w700,
+                  color: _inkDark,
                 ),
                 decoration: InputDecoration(
                   border: InputBorder.none,
-                  hintText: 'Rechercher un lieu…',
+                  hintText: 'Où veux-tu aller ? 🗺️',
                   hintStyle: GoogleFonts.nunito(
                     fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: _grey500,
+                    fontWeight: FontWeight.w600,
+                    color: _inkMid,
                   ),
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
@@ -360,12 +369,24 @@ class _SummerMapPageState extends State<SummerMapPage> {
               GestureDetector(
                 onTap: _clearSearch,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Icon(Icons.close_rounded, color: _grey500, size: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: _peach,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: _coral,
+                      size: 14,
+                    ),
+                  ),
                 ),
               )
             else
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
           ],
         ),
       ),
@@ -380,11 +401,9 @@ class _SummerMapPageState extends State<SummerMapPage> {
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: _GlassContainer(
-        radius: 18,
-        bg: Colors.white.withValues(alpha: 0.88),
+      child: _Card(
+        radius: 20,
         padding: EdgeInsets.zero,
-        shadowColor: Colors.black.withValues(alpha: 0.09),
         child: showSuggestions ? _buildSuggestions() : _buildResults(),
       ),
     );
@@ -392,70 +411,114 @@ class _SummerMapPageState extends State<SummerMapPage> {
 
   Widget _buildSuggestions() {
     return Padding(
-      padding: const EdgeInsets.all(14),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: _kSuggestions.map((s) {
-          final (emoji, label, query) = s;
-          return GestureDetector(
-            onTap: () => _tapSuggestion(query),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(
-                color: _grey200,
-                borderRadius: BorderRadius.circular(50),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ColorFiltered(
-                    colorFilter: _greyscale,
-                    child: Text(emoji, style: const TextStyle(fontSize: 18)),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: GoogleFonts.nunito(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: _grey500,
-                    ),
-                  ),
-                ],
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 2),
+            child: Text(
+              'Explore par catégorie ✨',
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _inkMid,
               ),
             ),
-          );
-        }).toList(),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _kSuggestions.map((s) {
+              final (emoji, label, query, chipBg) = s;
+              return GestureDetector(
+                onTap: () => _tapSuggestion(query),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: chipBg,
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(emoji, style: const TextStyle(fontSize: 17)),
+                      const SizedBox(width: 6),
+                      Text(
+                        label,
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: _inkDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildResults() {
     if (_searching) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2.5, color: _sunOrange),
-          ),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        child: Column(
+          children: [
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: _coral,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'On cherche pour toi… 🔍',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: _inkMid,
+              ),
+            ),
+          ],
         ),
       );
     }
 
     if (_places.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.all(20),
-        child: Text(
-          'Aucun résultat — essaie un autre terme 🌍',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.nunito(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: _grey500,
-          ),
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+        child: Column(
+          children: [
+            const Text('🌍', style: TextStyle(fontSize: 36)),
+            const SizedBox(height: 10),
+            Text(
+              'Aucun endroit trouvé…',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.nunito(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: _inkDark,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Essaie un autre terme !',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _inkMid,
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -463,7 +526,7 @@ class _SummerMapPageState extends State<SummerMapPage> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: _places.asMap().entries.map((entry) {
-        final i = entry.key;
+        final i     = entry.key;
         final place = entry.value;
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -474,16 +537,22 @@ class _SummerMapPageState extends State<SummerMapPage> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 13,
+                  vertical: 14,
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.location_on_rounded,
-                      color: _sunOrange,
-                      size: 18,
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: const BoxDecoration(
+                        color: _peach,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Text('📍', style: TextStyle(fontSize: 16)),
+                      ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         place.name,
@@ -491,18 +560,24 @@ class _SummerMapPageState extends State<SummerMapPage> {
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.nunito(
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: _ink,
+                          fontWeight: FontWeight.w700,
+                          color: _inkDark,
                           height: 1.4,
                         ),
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: _inkMid,
+                      size: 18,
                     ),
                   ],
                 ),
               ),
             ),
             if (i < _places.length - 1)
-              Divider(height: 1, thickness: 1, color: _grey200),
+              Divider(height: 1, thickness: 1, color: _divider),
           ],
         );
       }).toList(),
@@ -529,48 +604,35 @@ class _SummerMapPageState extends State<SummerMapPage> {
               },
               onTapCancel: () => setState(() => _buttonPressed = false),
               child: AnimatedScale(
-                scale: _buttonPressed ? 0.93 : 1.0,
-                duration: const Duration(milliseconds: 130),
+                scale: _buttonPressed ? 0.94 : 1.0,
+                duration: const Duration(milliseconds: 120),
                 curve: Curves.easeOut,
                 child: Container(
                   height: 58,
                   padding: const EdgeInsets.symmetric(horizontal: 36),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [_sunYellow, _sunOrange],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: _coral,
                     borderRadius: BorderRadius.circular(34),
                     boxShadow: [
                       BoxShadow(
-                        color: _sunOrange.withValues(alpha: 0.42),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                      BoxShadow(
-                        color: _sunYellow.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: _coral.withValues(alpha: 0.30),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
                     ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.my_location_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      const Text('📍', style: TextStyle(fontSize: 20)),
                       const SizedBox(width: 10),
                       Text(
-                        'Je suis ici',
+                        'Je suis ici !',
                         style: GoogleFonts.nunito(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
-                          letterSpacing: 0.4,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ],
@@ -586,49 +648,36 @@ class _SummerMapPageState extends State<SummerMapPage> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Shared glassmorphism container
+//  Shared minimal card — clean white surface, soft shadow, rounded corners
 // ─────────────────────────────────────────────────────────────────────────────
-class _GlassContainer extends StatelessWidget {
-  const _GlassContainer({
+class _Card extends StatelessWidget {
+  const _Card({
     required this.child,
     this.radius = 20,
     this.padding,
-    this.bg,
-    this.shadowColor,
   });
 
   final Widget child;
   final double radius;
   final EdgeInsetsGeometry? padding;
-  final Color? bg;
-  final Color? shadowColor;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: padding ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-          decoration: BoxDecoration(
-            color: bg ?? Colors.white.withValues(alpha: 0.68),
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.88),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: shadowColor ?? _sunYellow.withValues(alpha: 0.15),
-                blurRadius: 22,
-                offset: const Offset(0, 5),
-              ),
-            ],
+    return Container(
+      padding: padding ??
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: _cream,
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-          child: child,
-        ),
+        ],
       ),
+      child: child,
     );
   }
 }
@@ -678,7 +727,7 @@ class _PulsingMarkerState extends State<_PulsingMarker>
             height: 44 * _pulse.value,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _sunOrange.withValues(alpha: 0.22 * (1.5 - _pulse.value)),
+              color: _coral.withValues(alpha: 0.18 * (1.5 - _pulse.value)),
             ),
           ),
           Container(
@@ -686,11 +735,11 @@ class _PulsingMarkerState extends State<_PulsingMarker>
             height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _sunOrange,
+              color: _coral,
               border: Border.all(color: Colors.white, width: 2.5),
               boxShadow: [
                 BoxShadow(
-                  color: _sunOrange.withValues(alpha: 0.5),
+                  color: _coral.withValues(alpha: 0.4),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
