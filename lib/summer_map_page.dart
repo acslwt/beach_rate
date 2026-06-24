@@ -306,9 +306,9 @@ class _SummerMapPageState extends State<SummerMapPage> {
           const SizedBox(width: 8),
           Text(
             'Temps ensoleillé',
-            style: GoogleFonts.nunito(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
+            style: GoogleFonts.fredoka(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
               color: _coral,
             ),
           ),
@@ -558,9 +558,9 @@ class _SummerMapPageState extends State<SummerMapPage> {
                         place.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.nunito(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                        style: GoogleFonts.fredoka(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
                           color: _inkDark,
                           height: 1.4,
                         ),
@@ -612,7 +612,7 @@ class _SummerMapPageState extends State<SummerMapPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 36),
                   decoration: BoxDecoration(
                     color: _coral,
-                    borderRadius: BorderRadius.circular(34),
+                    borderRadius: BorderRadius.circular(4),
                     boxShadow: [
                       BoxShadow(
                         color: _coral.withValues(alpha: 0.30),
@@ -628,9 +628,9 @@ class _SummerMapPageState extends State<SummerMapPage> {
                       const SizedBox(width: 10),
                       Text(
                         'Je suis ici !',
-                        style: GoogleFonts.nunito(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
+                        style: GoogleFonts.fredoka(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w600,
                           color: Colors.white,
                           letterSpacing: 0.3,
                         ),
