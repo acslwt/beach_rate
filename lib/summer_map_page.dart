@@ -21,6 +21,11 @@ const Color _inkDark   = Color(0xFF2C2C2C); // main text
 const Color _inkMid    = Color(0xFFADB5BD); // hints, secondary text, icons
 const Color _divider   = Color(0xFFF0EDE8); // list dividers
 
+// Weather pill
+const Color _sunYellow  = Color(0xFFF7C948);
+const Color _tempGrey   = Color(0xFF8A9377);
+const Color _warmOrange = Color(0xFFE0976C);
+
 // Search bar — Playful Minimalist
 const Color _searchGrey   = Color(0xFF9AA088);
 const Color _fmGreen      = Color(0xFF2E8B57);
@@ -323,33 +328,60 @@ class _SummerMapPageState extends State<SummerMapPage> {
   }
 
   Widget _buildWeatherPill() {
-    return _Card(
-      radius: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(13, 9, 18, 9),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF28321E).withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text('☀️', style: TextStyle(fontSize: 20)),
-          const SizedBox(width: 8),
+          CustomPaint(
+            size: const Size(24, 24),
+            painter: _SunPainter(),
+          ),
+          const SizedBox(width: 9),
           Text(
-            'Temps ensoleillé',
+            'Ensoleillé',
             style: GoogleFonts.fredoka(
-              fontSize: 17,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: _coral,
+              color: _fmDark,
             ),
           ),
-          if (_isLocating) ...[
-            const SizedBox(width: 10),
-            const SizedBox(
-              width: 13,
-              height: 13,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _coral,
-              ),
+          const SizedBox(width: 9),
+          Text(
+            '42°',
+            style: GoogleFonts.nunito(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: _tempGrey,
             ),
-          ],
+          ),
+          const SizedBox(width: 9),
+          Container(
+            width: 1,
+            height: 16,
+            color: Colors.black.withValues(alpha: 0.10),
+          ),
+          const SizedBox(width: 9),
+          Text(
+            'Une excellente journée!',
+            style: GoogleFonts.nunito(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: _warmOrange,
+            ),
+          ),
         ],
       ),
     );
@@ -965,4 +997,42 @@ class _SpotIconPainter extends CustomPainter {
   @override
   bool shouldRepaint(_SpotIconPainter old) =>
       old.type != type || old.color != color;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Sun icon — filled disc + 8 stroke rays
+// ─────────────────────────────────────────────────────────────────────────────
+class _SunPainter extends CustomPainter {
+  const _SunPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const color = _sunYellow;
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+
+    final rayPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    for (int i = 0; i < 8; i++) {
+      final a = i * pi / 4;
+      canvas.drawLine(
+        Offset(cx + cos(a) * 7.5, cy + sin(a) * 7.5),
+        Offset(cx + cos(a) * 11.5, cy + sin(a) * 11.5),
+        rayPaint,
+      );
+    }
+
+    canvas.drawCircle(
+      Offset(cx, cy),
+      5.5,
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SunPainter old) => false;
 }
