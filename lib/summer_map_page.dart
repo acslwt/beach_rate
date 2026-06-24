@@ -69,6 +69,14 @@ class _CoolSpot {
       this.iconType, this.iconColor, this.crowd);
 }
 
+class _MapSpot {
+  final String name;
+  final LatLng point;
+  final int iconType; // 0=pool 1=beach 2=lake 3=river
+  final _Crowd crowd;
+  const _MapSpot(this.name, this.point, this.iconType, this.crowd);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Page
 // ─────────────────────────────────────────────────────────────────────────────
@@ -107,6 +115,17 @@ class _SummerMapPageState extends State<SummerMapPage> {
   ];
 
   int _hoveredSpot = -1;
+
+  static const List<_MapSpot> _kMapSpots = [
+    _MapSpot('Piscine Pontoise',     LatLng(48.8516, 2.3472), 0, _Crowd.medium),
+    _MapSpot('Plage de la Villette', LatLng(48.8940, 2.3877), 1, _Crowd.busy),
+    _MapSpot('Lac de Saint-Mandé',   LatLng(48.8397, 2.4217), 2, _Crowd.calm),
+    _MapSpot('Marne',                LatLng(48.8573, 2.4700), 3, _Crowd.medium),
+    _MapSpot('Piscine Keller',       LatLng(48.8471, 2.3028), 0, _Crowd.calm),
+    _MapSpot('Bois de Boulogne',     LatLng(48.8640, 2.2480), 2, _Crowd.busy),
+  ];
+
+  String? _selectedSpot;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
@@ -274,7 +293,10 @@ class _SummerMapPageState extends State<SummerMapPage> {
         initialZoom: 15.0,
         interactionOptions:
             const InteractionOptions(flags: InteractiveFlag.all),
-        onTap: (tapPos, point) => _searchFocus.unfocus(),
+        onTap: (tapPos, point) {
+          _searchFocus.unfocus();
+          setState(() => _selectedSpot = null);
+        },
         onPositionChanged: (camera, hasGesture) {
           if (hasGesture) _searchFocus.unfocus();
         },
@@ -284,6 +306,27 @@ class _SummerMapPageState extends State<SummerMapPage> {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.example.plage_review',
           maxZoom: 19,
+        ),
+        MarkerLayer(
+          markers: _kMapSpots.map((spot) {
+            final double zoneSize = switch (spot.crowd) {
+              _Crowd.calm   => 78.0,
+              _Crowd.medium => 98.0,
+              _Crowd.busy   => 120.0,
+            };
+            return Marker(
+              point: spot.point,
+              width: zoneSize + 24,
+              height: zoneSize + 24,
+              alignment: Alignment.center,
+              child: _SpotMarker(
+                spot: spot,
+                selected: _selectedSpot == spot.name,
+                onTap: () => setState(() => _selectedSpot =
+                    _selectedSpot == spot.name ? null : spot.name),
+              ),
+            );
+          }).toList(),
         ),
         if (_userLocation != null)
           MarkerLayer(
@@ -1112,4 +1155,104 @@ class _SunPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SunPainter old) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Map spot marker — crowd zone + pill label
+// ─────────────────────────────────────────────────────────────────────────────
+class _SpotStyle {
+  final double size;
+  final Color fill;
+  final Color border;
+  final Color dot;
+  const _SpotStyle(this.size, this.fill, this.border, this.dot);
+}
+
+class _SpotMarker extends StatelessWidget {
+  final _MapSpot spot;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SpotMarker({
+    required this.spot,
+    required this.selected,
+    required this.onTap,
+  });
+
+  static _SpotStyle _style(_Crowd crowd) => switch (crowd) {
+    _Crowd.calm   => const _SpotStyle(78,  Color(0x4D7BC79C), Color(0x9E7BC79C), _crowdGreen),
+    _Crowd.medium => const _SpotStyle(98,  Color(0x52F0B860), Color(0xA3F0B860), _crowdOrange),
+    _Crowd.busy   => const _SpotStyle(120, Color(0x52E88678), Color(0xA3E88678), _crowdRed),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _style(spot.crowd);
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: s.size,
+          height: s.size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: s.fill,
+            border: Border.all(color: s.border, width: 1.2),
+          ),
+        ),
+        GestureDetector(
+          onTap: onTap,
+          child: AnimatedScale(
+            scale: selected ? 1.09 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.fromLTRB(9, 7, 12, 7),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: selected
+                      ? s.dot
+                      : Colors.black.withValues(alpha: 0.05),
+                  width: selected ? 2.0 : 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF28321E).withValues(alpha: 0.14),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 11,
+                    height: 11,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: s.dot,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    spot.name,
+                    style: GoogleFonts.nunito(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: _fmDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
