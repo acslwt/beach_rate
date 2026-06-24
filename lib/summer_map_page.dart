@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' show cos, sin, pi;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,11 +21,17 @@ const Color _inkDark   = Color(0xFF2C2C2C); // main text
 const Color _inkMid    = Color(0xFFADB5BD); // hints, secondary text, icons
 const Color _divider   = Color(0xFFF0EDE8); // list dividers
 
-// Per-chip pastel backgrounds (colorful, warm, playful)
-const Color _chipBeach  = Color(0xFFFFE8C8);
-const Color _chipPool   = Color(0xFFBFDFFF);
-const Color _chipLake   = Color(0xFFBDF5D6);
-const Color _chipRiver  = Color(0xFFCDE8FF);
+// Search bar — Playful Minimalist
+const Color _searchGrey   = Color(0xFF9AA088);
+const Color _fmGreen      = Color(0xFF2E8B57);
+const Color _fmDark       = Color(0xFF2B2E26);
+const Color _clearBg      = Color(0xFFF0F1E6);
+const Color _clearIconCol = Color(0xFF7A8169);
+const Color _sectionHead  = Color(0xFFA7AD95);
+const Color _suggHover    = Color(0xFFF5F6EC);
+const Color _crowdGreen   = Color(0xFF2FA76B);
+const Color _crowdOrange  = Color(0xFFE59B36);
+const Color _crowdRed     = Color(0xFFE0786C);
 
 const LatLng _defaultCenter = LatLng(48.8566, 2.3522);
 
@@ -35,6 +43,20 @@ class _Place {
   final double lat;
   final double lon;
   const _Place(this.name, this.lat, this.lon);
+}
+
+enum _Crowd { calm, medium, busy }
+
+class _CoolSpot {
+  final String name;
+  final String description;
+  final String query;
+  final Color bg;
+  final int iconType; // 0=pool 1=beach 2=lake 3=river
+  final Color iconColor;
+  final _Crowd crowd;
+  const _CoolSpot(this.name, this.description, this.query, this.bg,
+      this.iconType, this.iconColor, this.crowd);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,13 +85,18 @@ class _SummerMapPageState extends State<SummerMapPage> {
   bool _searching = false;
   Timer? _debounce;
 
-  static const List<(String emoji, String label, String query, Color bg)>
-      _kSuggestions = [
-    ('🏖️', 'Plage',   'plage',   _chipBeach),
-    ('🏊', 'Piscine', 'piscine', _chipPool),
-    ('🏞️', 'Lac',     'lac',     _chipLake),
-    ('🌊', 'Rivière', 'rivière', _chipRiver),
+  static const List<_CoolSpot> _kCoolSpots = [
+    _CoolSpot('Swimming pools', '8 nearby · mostly quiet',  'piscine',
+        Color(0xFFD6EAF8), 0, Color(0xFF4A90D9), _Crowd.calm),
+    _CoolSpot('Beaches',        '5 nearby · getting busy',  'plage',
+        Color(0xFFFFF0CC), 1, Color(0xFFD4820A), _Crowd.medium),
+    _CoolSpot('Lakes',          '12 nearby · mostly quiet', 'lac',
+        Color(0xFFD5F5E3), 2, Color(0xFF2D8653), _Crowd.calm),
+    _CoolSpot('Rivers',         '6 nearby · moderate flow', 'rivière',
+        Color(0xFFD0EAF0), 3, Color(0xFF2E7D9B), _Crowd.medium),
   ];
+
+  int _hoveredSpot = -1;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
@@ -329,66 +356,78 @@ class _SummerMapPageState extends State<SummerMapPage> {
   }
 
   Widget _buildSearchBar() {
-    final hasText = _searchCtrl.text.isNotEmpty;
-    return _Card(
-      radius: 20,
-      padding: EdgeInsets.zero,
-      child: SizedBox(
-        height: 54,
-        child: Row(
-          children: [
-            const SizedBox(width: 16),
-            const Icon(Icons.search_rounded, color: _inkMid, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: _searchCtrl,
-                focusNode: _searchFocus,
-                onChanged: _onSearchChanged,
-                textInputAction: TextInputAction.search,
-                onSubmitted: _doSearch,
-                style: GoogleFonts.nunito(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: _searchFocused ? _fmGreen : Colors.transparent,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF28321E).withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CustomPaint(
+            size: const Size(20, 20),
+            painter: _SearchIconPainter(color: _searchGrey),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              focusNode: _searchFocus,
+              onChanged: _onSearchChanged,
+              textInputAction: TextInputAction.search,
+              onSubmitted: _doSearch,
+              style: GoogleFonts.nunito(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: _fmDark,
+              ),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: _searchFocused
+                    ? 'Pools, beaches, lakes, rivers…'
+                    : 'Search a place to cool off…',
+                hintStyle: GoogleFonts.nunito(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: _inkDark,
+                  color: _searchGrey,
                 ),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'Où veux-tu aller ? 🗺️',
-                  hintStyle: GoogleFonts.nunito(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: _inkMid,
-                  ),
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          if (_searchFocused)
+            GestureDetector(
+              onTap: _clearSearch,
+              child: Container(
+                width: 26,
+                height: 26,
+                decoration: const BoxDecoration(
+                  color: _clearBg,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  color: _clearIconCol,
+                  size: 14,
                 ),
               ),
             ),
-            if (hasText)
-              GestureDetector(
-                onTap: _clearSearch,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: _peach,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      color: _coral,
-                      size: 14,
-                    ),
-                  ),
-                ),
-              )
-            else
-              const SizedBox(width: 16),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -399,66 +438,145 @@ class _SummerMapPageState extends State<SummerMapPage> {
 
     if (!showSuggestions && !showResults) return const SizedBox.shrink();
 
+    if (showSuggestions) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: TweenAnimationBuilder<double>(
+          key: const ValueKey('cool-spots'),
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          builder: (context, t, child) => Opacity(
+            opacity: t,
+            child: Transform.translate(
+              offset: Offset(0, 8 * (1 - t)),
+              child: child,
+            ),
+          ),
+          child: _buildSuggestions(),
+        ),
+      );
+    }
+
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(top: 10),
       child: _Card(
-        radius: 20,
+        radius: 26,
         padding: EdgeInsets.zero,
-        child: showSuggestions ? _buildSuggestions() : _buildResults(),
+        child: _buildResults(),
       ),
     );
   }
 
   Widget _buildSuggestions() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF28321E).withValues(alpha: 0.16),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 12, left: 2),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
             child: Text(
-              'Explore par catégorie ✨',
+              'COOL SPOTS NEAR YOU',
               style: GoogleFonts.nunito(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: _inkMid,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: _sectionHead,
+                letterSpacing: 0.04 * 12,
               ),
             ),
           ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _kSuggestions.map((s) {
-              final (emoji, label, query, chipBg) = s;
-              return GestureDetector(
-                onTap: () => _tapSuggestion(query),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          ..._kCoolSpots.asMap().entries.map((entry) {
+            final i    = entry.key;
+            final spot = entry.value;
+            final hovered = _hoveredSpot == i;
+            return MouseRegion(
+              onEnter: (_) => setState(() => _hoveredSpot = i),
+              onExit:  (_) => setState(() => _hoveredSpot = -1),
+              child: GestureDetector(
+                onTap: () => _tapSuggestion(spot.query),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  margin: const EdgeInsets.symmetric(vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: chipBg,
-                    borderRadius: BorderRadius.circular(50),
+                    color: hovered ? _suggHover : Colors.transparent,
+                    borderRadius: BorderRadius.circular(18),
                   ),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(emoji, style: const TextStyle(fontSize: 17)),
-                      const SizedBox(width: 6),
-                      Text(
-                        label,
-                        style: GoogleFonts.nunito(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: _inkDark,
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: spot.bg,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Center(
+                          child: CustomPaint(
+                            size: const Size(22, 22),
+                            painter: _SpotIconPainter(
+                              type: spot.iconType,
+                              color: spot.iconColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              spot.name,
+                              style: GoogleFonts.fredoka(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: _fmDark,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              spot.description,
+                              style: GoogleFonts.nunito(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _searchGrey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 11,
+                        height: 11,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: switch (spot.crowd) {
+                            _Crowd.calm   => _crowdGreen,
+                            _Crowd.medium => _crowdOrange,
+                            _Crowd.busy   => _crowdRed,
+                          },
                         ),
                       ),
                     ],
                   ),
                 ),
-              );
-            }).toList(),
-          ),
+              ),
+            );
+          }),
+          const SizedBox(height: 4),
         ],
       ),
     );
@@ -750,4 +868,101 @@ class _PulsingMarkerState extends State<_PulsingMarker>
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Stroke magnifying-glass icon
+// ─────────────────────────────────────────────────────────────────────────────
+class _SearchIconPainter extends CustomPainter {
+  final Color color;
+  const _SearchIconPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final cx = size.width * 0.40;
+    final cy = size.height * 0.40;
+    final r  = size.width * 0.30;
+    canvas.drawCircle(Offset(cx, cy), r, paint);
+    final startX = cx + r * cos(pi * 0.75);
+    final startY = cy + r * sin(pi * 0.75);
+    canvas.drawLine(
+      Offset(startX, startY),
+      Offset(size.width * 0.92, size.height * 0.92),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SearchIconPainter old) => old.color != color;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Stroke spot illustrations
+// ─────────────────────────────────────────────────────────────────────────────
+class _SpotIconPainter extends CustomPainter {
+  final int type;
+  final Color color;
+  const _SpotIconPainter({required this.type, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.9
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final w = size.width;
+    final h = size.height;
+    switch (type) {
+      case 0: // pool — two wave lines
+        _wave(canvas, p, w, h, 0.38, 0.12);
+        _wave(canvas, p, w, h, 0.62, 0.12);
+      case 1: // beach — sun + horizon
+        canvas.drawCircle(Offset(w * 0.62, h * 0.36), w * 0.17, p);
+        for (int i = 0; i < 6; i++) {
+          final a = i * pi / 3;
+          canvas.drawLine(
+            Offset(w * 0.62 + cos(a) * w * 0.23, h * 0.36 + sin(a) * h * 0.23),
+            Offset(w * 0.62 + cos(a) * w * 0.31, h * 0.36 + sin(a) * h * 0.31),
+            p,
+          );
+        }
+        canvas.drawLine(Offset(0, h * 0.72), Offset(w, h * 0.72), p);
+        _wave(canvas, p, w, h, 0.85, 0.10);
+      case 2: // lake — mountain + water
+        final mt = ui.Path()
+          ..moveTo(w * 0.05, h * 0.72)
+          ..lineTo(w * 0.38, h * 0.22)
+          ..lineTo(w * 0.62, h * 0.50)
+          ..lineTo(w * 0.50, h * 0.50)
+          ..lineTo(w * 0.75, h * 0.28)
+          ..lineTo(w * 0.95, h * 0.72);
+        canvas.drawPath(mt, p);
+        _wave(canvas, p, w, h, 0.85, 0.08);
+      case 3: // river — flowing curve
+        final rv = ui.Path()
+          ..moveTo(w * 0.30, 0)
+          ..cubicTo(w * 0.80, h * 0.15, w * 0.10, h * 0.45, w * 0.65, h * 0.55)
+          ..cubicTo(w * 0.95, h * 0.62, w * 0.25, h * 0.82, w * 0.65, h);
+        canvas.drawPath(rv, p);
+    }
+  }
+
+  void _wave(Canvas canvas, Paint p, double w, double h, double cy, double amp) {
+    final path = ui.Path()
+      ..moveTo(0, h * cy)
+      ..quadraticBezierTo(w * 0.25, h * (cy - amp), w * 0.50, h * cy)
+      ..quadraticBezierTo(w * 0.75, h * (cy + amp), w, h * cy);
+    canvas.drawPath(path, p);
+  }
+
+  @override
+  bool shouldRepaint(_SpotIconPainter old) =>
+      old.type != type || old.color != color;
 }
