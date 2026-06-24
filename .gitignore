@@ -52,7 +52,7 @@ claude/
 *.claude/
 claude.md.local
 claude.local.md
-
+CLAUDE.md
 # Logs / agent state
 claude-log/
 *.claude.log

@@ -26,6 +26,11 @@ const Color _sunYellow  = Color(0xFFF7C948);
 const Color _tempGrey   = Color(0xFF8A9377);
 const Color _warmOrange = Color(0xFFE0976C);
 
+// Location marker
+const Color _markerLavender = Color(0xFFC9C6EE);
+const Color _markerRing     = Color(0xFF9C97E6);
+const Color _markerInk      = Color(0xFF3B3960);
+
 // Search bar — Playful Minimalist
 const Color _searchGrey   = Color(0xFF9AA088);
 const Color _fmGreen      = Color(0xFF2E8B57);
@@ -285,8 +290,9 @@ class _SummerMapPageState extends State<SummerMapPage> {
             markers: [
               Marker(
                 point: _userLocation!,
-                width: 44,
-                height: 44,
+                width: 90,
+                height: 112,
+                alignment: const Alignment(0, -0.27),
                 child: const _PulsingMarker(),
               ),
             ],
@@ -833,7 +839,7 @@ class _Card extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Pulsing location marker
+//  Playful Minimalist location marker
 // ─────────────────────────────────────────────────────────────────────────────
 class _PulsingMarker extends StatefulWidget {
   const _PulsingMarker();
@@ -845,18 +851,19 @@ class _PulsingMarker extends StatefulWidget {
 class _PulsingMarkerState extends State<_PulsingMarker>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
-  late final Animation<double> _pulse;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
+    final curved = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _scale   = Tween<double>(begin: 0.85, end: 1.7).animate(curved);
+    _opacity = Tween<double>(begin: 0.55, end: 0.0).animate(curved);
   }
 
   @override
@@ -867,39 +874,109 @@ class _PulsingMarkerState extends State<_PulsingMarker>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, child) => Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 44 * _pulse.value,
-            height: 44 * _pulse.value,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _coral.withValues(alpha: 0.18 * (1.5 - _pulse.value)),
-            ),
-          ),
-          Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _coral,
-              border: Border.all(color: Colors.white, width: 2.5),
-              boxShadow: [
-                BoxShadow(
-                  color: _coral.withValues(alpha: 0.4),
-                  blurRadius: 8,
-                  spreadRadius: 1,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 82,
+          height: 82,
+          child: AnimatedBuilder(
+            animation: _ctrl,
+            builder: (context, child) => Stack(
+              alignment: Alignment.center,
+              children: [
+                Opacity(
+                  opacity: _opacity.value,
+                  child: Transform.scale(
+                    scale: _scale.value,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _markerRing,
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _markerLavender,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF463C8C).withValues(alpha: 0.30),
+                        blurRadius: 14,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: CustomPaint(
+                      size: const Size(26, 26),
+                      painter: const _FacePainter(),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(
+            color: _markerInk,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            'Toi',
+            style: GoogleFonts.nunito(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Cute face — eyes + smile
+// ─────────────────────────────────────────────────────────────────────────────
+class _FacePainter extends CustomPainter {
+  const _FacePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const color = _markerInk;
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+
+    canvas.drawCircle(Offset(cx - 5.0, cy - 3.5), 1.7, Paint()..color = color);
+    canvas.drawCircle(Offset(cx + 5.0, cy - 3.5), 1.7, Paint()..color = color);
+
+    final smile = ui.Path()
+      ..moveTo(cx - 5.5, cy + 2.0)
+      ..quadraticBezierTo(cx, cy + 7.5, cx + 5.5, cy + 2.0);
+    canvas.drawPath(
+      smile,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_FacePainter old) => false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
