@@ -15,6 +15,14 @@ import '../widgets/map_view.dart';
 import '../widgets/search_bar_widget.dart';
 import '../widgets/search_dropdown.dart';
 import '../widgets/weather_pill.dart';
+import '../../../auth/data/datasources/firebase_auth_datasource.dart';
+import '../../../auth/data/repositories/auth_repository_impl.dart';
+import '../../../auth/domain/usecases/sign_in_usecase.dart';
+import '../../../auth/domain/usecases/sign_in_with_google_usecase.dart';
+import '../../../auth/domain/usecases/sign_out_usecase.dart';
+import '../../../auth/domain/usecases/sign_up_usecase.dart';
+import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/presentation/widgets/profile_button.dart';
 
 const List<CoolSpot> _kCoolSpots = [
   CoolSpot(
@@ -55,6 +63,7 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   late final MapStateController _ctrl;
+  late final AuthController _authCtrl;
   final _searchCtrl  = TextEditingController();
   final _searchFocus = FocusNode();
   bool _searchFocused = false;
@@ -62,6 +71,16 @@ class _MapPageState extends State<MapPage> {
   @override
   void initState() {
     super.initState();
+
+    final authDataSource = FirebaseAuthDataSourceImpl();
+    final authRepository = AuthRepositoryImpl(authDataSource);
+    _authCtrl = AuthController(
+      repository: authRepository,
+      signIn: SignInUseCase(authRepository),
+      signUp: SignUpUseCase(authRepository),
+      signInWithGoogle: SignInWithGoogleUseCase(authRepository),
+      signOut: SignOutUseCase(authRepository),
+    );
 
     final client = http.Client();
     _ctrl = MapStateController(
@@ -90,6 +109,7 @@ class _MapPageState extends State<MapPage> {
   @override
   void dispose() {
     _ctrl.dispose();
+    _authCtrl.dispose();
     _searchCtrl.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -142,13 +162,22 @@ class _MapPageState extends State<MapPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SearchBarWidget(
-                controller: _searchCtrl,
-                focusNode: _searchFocus,
-                isFocused: _searchFocused,
-                onChanged: _ctrl.onSearchChanged,
-                onSubmitted: (q) => _ctrl.onSearchChanged(q),
-                onClear: _clearAndUnfocus,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: SearchBarWidget(
+                      controller: _searchCtrl,
+                      focusNode: _searchFocus,
+                      isFocused: _searchFocused,
+                      onChanged: _ctrl.onSearchChanged,
+                      onSubmitted: (q) => _ctrl.onSearchChanged(q),
+                      onClear: _clearAndUnfocus,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ProfileButton(controller: _authCtrl),
+                ],
               ),
               AnimatedSize(
                 duration: const Duration(milliseconds: 220),
