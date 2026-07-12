@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/services/user_points_service.dart';
+import '../../../../core/utils/firestore_ids.dart';
 import '../../../../core/widgets/app_modal.dart';
 import '../../data/datasources/nominatim_datasource.dart';
 import '../../data/datasources/overpass_datasource.dart';
@@ -34,8 +35,7 @@ import '../../../auth/domain/usecases/sign_out_usecase.dart';
 import '../../../auth/domain/usecases/sign_up_usecase.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/widgets/profile_button.dart';
-import '../../../affluence/data/datasources/firestore_affluence_datasource.dart'
-    show FirestoreAffluenceDatasource, firestoreZoneDocId;
+import '../../../affluence/data/datasources/firestore_affluence_datasource.dart';
 import '../../../affluence/data/repositories/affluence_repository_impl.dart';
 import '../../../affluence/domain/entities/nearby_spot.dart';
 import '../../../affluence/domain/usecases/submit_affluence_report.dart';
@@ -45,6 +45,12 @@ import '../../../affluence/presentation/controllers/affluence_controller.dart';
 import '../../../affluence/presentation/widgets/affluence_card.dart';
 import '../../../affluence/presentation/widgets/affluence_history_chart.dart';
 import '../../../affluence/presentation/widgets/report_affluence_button.dart';
+import '../../../comments/data/datasources/firestore_comment_datasource.dart';
+import '../../../comments/data/repositories/comment_repository_impl.dart';
+import '../../../comments/domain/repositories/comment_repository.dart';
+import '../../../comments/domain/usecases/post_comment.dart';
+import '../../../comments/domain/usecases/watch_comments.dart';
+import '../../../comments/presentation/widgets/comments_sheet.dart';
 
 const List<CoolSpot> _kCoolSpots = [
   CoolSpot(
@@ -90,6 +96,8 @@ class _MapPageState extends State<MapPage> {
   late final UserPointsService _pointsService;
   late final CreateCommunitySpot _createCommunitySpot;
   late final WatchWeeklyAffluenceProfile _watchWeeklyAffluenceProfile;
+  late final WatchComments _watchComments;
+  late final PostComment _postComment;
   final _points = ValueNotifier<int>(0);
   StreamSubscription<int>? _pointsSub;
   final _searchCtrl  = TextEditingController();
@@ -136,6 +144,12 @@ class _MapPageState extends State<MapPage> {
       watchZoneAffluence: WatchZoneAffluence(affluenceRepository),
     );
     _watchWeeklyAffluenceProfile = WatchWeeklyAffluenceProfile(affluenceRepository);
+
+    final CommentRepository commentRepository = CommentRepositoryImpl(
+      FirestoreCommentDatasource(FirebaseFirestore.instance),
+    );
+    _watchComments = WatchComments(commentRepository);
+    _postComment = PostComment(commentRepository);
 
     _searchFocus.addListener(
       () => setState(() => _searchFocused = _searchFocus.hasFocus),
@@ -225,6 +239,36 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+  Future<bool> _submitComment(MapSpot spot, String text) async {
+    final profile = _authCtrl.profile;
+    if (profile == null) return false;
+    try {
+      await _postComment(
+        zoneId: spot.id,
+        userId: profile.uid,
+        userName: profile.firstName,
+        text: text,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _showComments(MapSpot spot) {
+    showAppModal(
+      context,
+      (ctx) => CommentsSheet(
+        spotName: spot.name,
+        zoneId: spot.id,
+        watchComments: _watchComments,
+        loggedIn: _authCtrl.loggedIn,
+        onSubmit: (text) => _submitComment(spot, text),
+        onClose: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _ctrl.removeListener(_syncAffluenceContext);
@@ -300,6 +344,7 @@ class _MapPageState extends State<MapPage> {
                   stats: _affluenceCtrl.statsForZone(selectedSpot.id),
                   onClose: _ctrl.clearSelectedSpot,
                   onShowHistory: () => _showHistoryChart(selectedSpot),
+                  onShowComments: () => _showComments(selectedSpot),
                 ),
                 const SizedBox(height: 10),
               ],

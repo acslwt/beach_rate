@@ -41,3 +41,10 @@ const int kAffluencePointsPerReport = 10;
 
 /// Largeur (en heures) des créneaux horaires utilisés pour l'historique d'affluence.
 const int kAffluenceHourBucketSize = 2;
+
+// ── Commentaires ──────────────────────────────────────────────────────────────
+/// Longueur maximale d'un commentaire.
+const int kMaxCommentLength = 300;
+
+/// Nombre de commentaires récents chargés pour un spot.
+const int kCommentsFetchLimit = 50;
