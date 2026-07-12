@@ -262,27 +262,37 @@ class _MapPageState extends State<MapPage> {
   Widget _buildBottomOverlay() {
     final selectedSpot = _spotByName(_ctrl.selectedSpotName);
     final canAddSpot = _ctrl.userLocation != null && _affluenceCtrl.eligibleSpot == null;
+    // Bottom offset must clear ActivityBar's own height (28 padding + ~82
+    // button) *inside* the same SafeArea it uses — a raw Positioned bottom
+    // value ignores the device's safe-area inset (home indicator / gesture
+    // bar) and drifts into the activity buttons on devices that have one.
     return Positioned(
       left: 16,
       right: 16,
-      bottom: 128,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (selectedSpot != null) ...[
-            AffluenceCard(
-              spotName: selectedSpot.name,
-              zoneId: firestoreZoneDocId(selectedSpot.id),
-              stats: _affluenceCtrl.statsForZone(selectedSpot.id),
-              onClose: _ctrl.clearSelectedSpot,
-            ),
-            const SizedBox(height: 10),
-          ],
-          if (canAddSpot)
-            AddSpotButton(onTap: _showAddSpotForm)
-          else
-            ReportAffluenceButton(controller: _affluenceCtrl),
-        ],
+      bottom: 0,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 126),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (selectedSpot != null) ...[
+                AffluenceCard(
+                  spotName: selectedSpot.name,
+                  zoneId: firestoreZoneDocId(selectedSpot.id),
+                  stats: _affluenceCtrl.statsForZone(selectedSpot.id),
+                  onClose: _ctrl.clearSelectedSpot,
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (canAddSpot)
+                AddSpotButton(onTap: _showAddSpotForm)
+              else
+                ReportAffluenceButton(controller: _affluenceCtrl),
+            ],
+          ),
+        ),
       ),
     );
   }
