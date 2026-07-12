@@ -1,16 +1,27 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../../../core/services/user_points_service.dart';
+import '../../../../core/widgets/app_modal.dart';
 import '../../data/datasources/nominatim_datasource.dart';
 import '../../data/datasources/overpass_datasource.dart';
+import '../../data/datasources/firestore_community_spot_datasource.dart';
+import '../../data/repositories/community_spot_repository_impl.dart';
 import '../../data/repositories/map_spot_repository_impl.dart';
 import '../../data/repositories/place_repository_impl.dart';
 import '../../domain/entities/cool_spot.dart';
 import '../../domain/entities/crowd_level.dart';
 import '../../domain/entities/map_spot.dart';
+import '../../domain/repositories/community_spot_repository.dart';
+import '../../domain/usecases/create_community_spot.dart';
 import '../../domain/usecases/fetch_spots_in_view.dart';
 import '../../domain/usecases/search_places.dart';
+import '../../domain/usecases/watch_community_spots.dart';
 import '../controllers/map_state_controller.dart';
 import '../widgets/activity_bar.dart';
+import '../widgets/add_spot_button.dart';
+import '../widgets/add_spot_form.dart';
 import '../widgets/map_view.dart';
 import '../widgets/search_bar_widget.dart';
 import '../widgets/search_dropdown.dart';
@@ -23,6 +34,15 @@ import '../../../auth/domain/usecases/sign_out_usecase.dart';
 import '../../../auth/domain/usecases/sign_up_usecase.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/widgets/profile_button.dart';
+import '../../../affluence/data/datasources/firestore_affluence_datasource.dart'
+    show FirestoreAffluenceDatasource, firestoreZoneDocId;
+import '../../../affluence/data/repositories/affluence_repository_impl.dart';
+import '../../../affluence/domain/entities/nearby_spot.dart';
+import '../../../affluence/domain/usecases/submit_affluence_report.dart';
+import '../../../affluence/domain/usecases/watch_zone_affluence.dart';
+import '../../../affluence/presentation/controllers/affluence_controller.dart';
+import '../../../affluence/presentation/widgets/affluence_card.dart';
+import '../../../affluence/presentation/widgets/report_affluence_button.dart';
 
 const List<CoolSpot> _kCoolSpots = [
   CoolSpot(
@@ -64,6 +84,11 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> {
   late final MapStateController _ctrl;
   late final AuthController _authCtrl;
+  late final AffluenceController _affluenceCtrl;
+  late final UserPointsService _pointsService;
+  late final CreateCommunitySpot _createCommunitySpot;
+  final _points = ValueNotifier<int>(0);
+  StreamSubscription<int>? _pointsSub;
   final _searchCtrl  = TextEditingController();
   final _searchFocus = FocusNode();
   bool _searchFocused = false;
@@ -83,6 +108,11 @@ class _MapPageState extends State<MapPage> {
     );
 
     final client = http.Client();
+    final CommunitySpotRepository communitySpotRepository = CommunitySpotRepositoryImpl(
+      FirestoreCommunitySpotDatasource(FirebaseFirestore.instance),
+    );
+    _createCommunitySpot = CreateCommunitySpot(communitySpotRepository);
+
     _ctrl = MapStateController(
       searchPlaces: SearchPlaces(
         PlaceRepositoryImpl(NominatimDatasource(client)),
@@ -90,12 +120,27 @@ class _MapPageState extends State<MapPage> {
       fetchSpotsInView: FetchSpotsInView(
         MapSpotRepositoryImpl(OverpassDatasource(client)),
       ),
+      watchCommunitySpots: WatchCommunitySpots(communitySpotRepository),
+    );
+
+    _pointsService = UserPointsService();
+    final affluenceRepository = AffluenceRepositoryImpl(
+      FirestoreAffluenceDatasource(FirebaseFirestore.instance, _pointsService),
+    );
+    _affluenceCtrl = AffluenceController(
+      repository: affluenceRepository,
+      submitAffluenceReport: SubmitAffluenceReport(affluenceRepository),
+      watchZoneAffluence: WatchZoneAffluence(affluenceRepository),
     );
 
     _searchFocus.addListener(
       () => setState(() => _searchFocused = _searchFocus.hasFocus),
     );
     _searchCtrl.addListener(() => setState(() {}));
+
+    _authCtrl.addListener(_syncUser);
+    _ctrl.addListener(_syncAffluenceContext);
+    _syncUser();
 
     _ctrl.init().then((_) {
       if (mounted) {
@@ -106,8 +151,71 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
+  void _syncUser() {
+    final profile = _authCtrl.profile;
+    _affluenceCtrl.setUser(profile?.uid);
+    _pointsSub?.cancel();
+    if (profile == null) {
+      _points.value = 0;
+      return;
+    }
+    _pointsSub = _pointsService.watchPoints(profile.uid).listen((value) {
+      _points.value = value;
+    });
+  }
+
+  void _syncAffluenceContext() {
+    _affluenceCtrl.updateContext(
+      userLocation: _ctrl.userLocation,
+      spots: _ctrl.mapSpots
+          .map((s) => NearbySpot(id: s.id, name: s.name, location: s.location))
+          .toList(),
+    );
+  }
+
+  MapSpot? _spotByName(String? name) {
+    if (name == null) return null;
+    for (final spot in _ctrl.mapSpots) {
+      if (spot.name == name) return spot;
+    }
+    return null;
+  }
+
+  Future<bool> _submitNewSpot(String name, SpotType type) async {
+    final location = _ctrl.userLocation;
+    final userId = _authCtrl.profile?.uid;
+    if (location == null || userId == null) return false;
+    try {
+      await _createCommunitySpot(
+        name: name,
+        type: type,
+        location: location,
+        userId: userId,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _showAddSpotForm() {
+    showAppModal(
+      context,
+      (ctx) => AddSpotForm(
+        loggedIn: _authCtrl.loggedIn,
+        onSubmit: _submitNewSpot,
+        onClose: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _ctrl.removeListener(_syncAffluenceContext);
+    _authCtrl.removeListener(_syncUser);
+    _pointsSub?.cancel();
+    _points.dispose();
+    _affluenceCtrl.dispose();
     _ctrl.dispose();
     _authCtrl.dispose();
     _searchCtrl.dispose();
@@ -126,7 +234,7 @@ class _MapPageState extends State<MapPage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: ListenableBuilder(
-        listenable: _ctrl,
+        listenable: Listenable.merge([_ctrl, _affluenceCtrl]),
         builder: (context, child) => Stack(
           fit: StackFit.expand,
           children: [
@@ -140,11 +248,41 @@ class _MapPageState extends State<MapPage> {
                 if (hasGesture) _searchFocus.unfocus();
                 _ctrl.scheduleSpotFetch();
               },
+              liveLevelForSpot: _affluenceCtrl.liveLevelForSpot,
             ),
             _buildTopOverlay(),
+            _buildBottomOverlay(),
             ActivityBar(controller: _ctrl),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBottomOverlay() {
+    final selectedSpot = _spotByName(_ctrl.selectedSpotName);
+    final canAddSpot = _ctrl.userLocation != null && _affluenceCtrl.eligibleSpot == null;
+    return Positioned(
+      left: 16,
+      right: 16,
+      bottom: 128,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (selectedSpot != null) ...[
+            AffluenceCard(
+              spotName: selectedSpot.name,
+              zoneId: firestoreZoneDocId(selectedSpot.id),
+              stats: _affluenceCtrl.statsForZone(selectedSpot.id),
+              onClose: _ctrl.clearSelectedSpot,
+            ),
+            const SizedBox(height: 10),
+          ],
+          if (canAddSpot)
+            AddSpotButton(onTap: _showAddSpotForm)
+          else
+            ReportAffluenceButton(controller: _affluenceCtrl),
+        ],
       ),
     );
   }
@@ -176,7 +314,7 @@ class _MapPageState extends State<MapPage> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  ProfileButton(controller: _authCtrl),
+                  ProfileButton(controller: _authCtrl, points: _points),
                 ],
               ),
               AnimatedSize(
