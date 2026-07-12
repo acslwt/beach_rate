@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/constants/app_colors.dart';
 
 class UserMarker extends StatefulWidget {
-  const UserMarker({super.key});
+  const UserMarker({super.key, this.photoUrl, this.initial});
+
+  /// Signed-in user's profile photo, when the sign-in provider has one.
+  final String? photoUrl;
+
+  /// Fallback letter shown in a colored circle when there's no photo.
+  /// `null` means no signed-in user at all — keeps the original generic
+  /// illustration instead of an avatar.
+  final String? initial;
 
   @override
   State<UserMarker> createState() => _UserMarkerState();
@@ -58,12 +67,7 @@ class _UserMarkerState extends State<UserMarker>
                 ),
               ),
             ),
-            Image.asset(
-              'moi.png',
-              width: 78,
-              height: 104,
-              fit: BoxFit.contain,
-            ),
+            _Avatar(photoUrl: widget.photoUrl, initial: widget.initial),
           ],
         ),
         const SizedBox(height: 6),
@@ -83,6 +87,73 @@ class _UserMarkerState extends State<UserMarker>
           ),
         ),
       ],
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.photoUrl, required this.initial});
+
+  final String? photoUrl;
+  final String? initial;
+
+  @override
+  Widget build(BuildContext context) {
+    final letter = initial;
+    if (letter == null) {
+      // No signed-in user — keep the original friendly default illustration.
+      return Image.asset(
+        'moi.png',
+        width: 78,
+        height: 104,
+        fit: BoxFit.contain,
+      );
+    }
+
+    return Container(
+      width: 78,
+      height: 78,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: appLavender,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: photoUrl != null
+            ? Image.network(
+                photoUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => _InitialLabel(letter),
+              )
+            : _InitialLabel(letter),
+      ),
+    );
+  }
+}
+
+class _InitialLabel extends StatelessWidget {
+  const _InitialLabel(this.letter);
+
+  final String letter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        letter,
+        style: GoogleFonts.fredoka(
+          fontSize: 30,
+          fontWeight: FontWeight.w700,
+          color: appMarkerInk,
+        ),
+      ),
     );
   }
 }

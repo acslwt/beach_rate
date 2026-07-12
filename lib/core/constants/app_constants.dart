@@ -17,6 +17,10 @@ const int kSearchFetchLimit = 8;
 /// How many results are actually shown after sorting by proximity.
 const int kSearchDisplayLimit = 5;
 
+/// Minimum movement (meters) before a new live GPS fix triggers a marker
+/// update — filters out GPS jitter without needing a debounce timer.
+const int kLocationDistanceFilterMeters = 5;
+
 const List<String> kOverpassMirrors = [
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
   'https://overpass-api.de/api/interpreter',

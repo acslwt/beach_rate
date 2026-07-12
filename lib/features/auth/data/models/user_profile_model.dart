@@ -6,6 +6,7 @@ class UserProfileModel extends UserProfile {
     required super.uid,
     required super.firstName,
     required super.email,
+    super.photoUrl,
     super.favorites,
     super.visits,
   });
@@ -15,6 +16,11 @@ class UserProfileModel extends UserProfile {
     final firstName = displayName.isNotEmpty
         ? displayName.split(' ').first
         : user.email?.split('@').first ?? 'Utilisateur';
-    return UserProfileModel(uid: user.uid, firstName: firstName, email: user.email ?? '');
+    return UserProfileModel(
+      uid: user.uid,
+      firstName: firstName,
+      email: user.email ?? '',
+      photoUrl: user.photoURL,
+    );
   }
 }

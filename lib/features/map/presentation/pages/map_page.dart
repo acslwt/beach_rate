@@ -294,7 +294,7 @@ class _MapPageState extends State<MapPage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: ListenableBuilder(
-        listenable: Listenable.merge([_ctrl, _affluenceCtrl]),
+        listenable: Listenable.merge([_ctrl, _affluenceCtrl, _authCtrl]),
         builder: (context, child) => Stack(
           fit: StackFit.expand,
           children: [
@@ -309,6 +309,8 @@ class _MapPageState extends State<MapPage> {
                 _ctrl.scheduleSpotFetch();
               },
               liveLevelForSpot: _affluenceCtrl.liveLevelForSpot,
+              userPhotoUrl: _authCtrl.profile?.photoUrl,
+              userInitial: _authCtrl.profile?.initial,
             ),
             _buildTopOverlay(),
             _buildBottomOverlay(),
