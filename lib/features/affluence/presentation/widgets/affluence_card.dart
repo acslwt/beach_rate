@@ -15,6 +15,7 @@ class AffluenceCard extends StatelessWidget {
     required this.zoneId,
     required this.stats,
     required this.onClose,
+    required this.onShowHistory,
   });
 
   final String spotName;
@@ -25,6 +26,7 @@ class AffluenceCard extends StatelessWidget {
   final String zoneId;
   final ZoneAffluenceStats? stats;
   final VoidCallback onClose;
+  final VoidCallback onShowHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +104,27 @@ class AffluenceCard extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: onShowHistory,
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                const Icon(Icons.bar_chart_rounded, size: 16, color: appCoral),
+                const SizedBox(width: 6),
+                Text(
+                  'Voir l\'historique par heure',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: appCoral,
+                  ),
+                ),
+                const Spacer(),
+                const Icon(Icons.chevron_right_rounded, size: 18, color: appCoral),
+              ],
+            ),
+          ),
           const SizedBox(height: 8),
           SelectableText(
             'ID document Firestore : $zoneId',
