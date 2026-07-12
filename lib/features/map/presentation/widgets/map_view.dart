@@ -18,6 +18,8 @@ class MapView extends StatelessWidget {
     required this.onTap,
     required this.onPositionChanged,
     this.liveLevelForSpot,
+    this.userPhotoUrl,
+    this.userInitial,
   });
 
   final MapStateController controller;
@@ -27,6 +29,11 @@ class MapView extends StatelessWidget {
   /// Looks up the live affluence level (0-5) for a spot id, when available.
   /// Kept as an injected callback so this feature doesn't depend on `affluence`.
   final double? Function(String spotId)? liveLevelForSpot;
+
+  /// Signed-in user's avatar for the "my location" marker — kept as plain
+  /// values (not a `UserProfile`) so this feature doesn't depend on `auth`.
+  final String? userPhotoUrl;
+  final String? userInitial;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +92,9 @@ class MapView extends StatelessWidget {
                 alignment: Alignment.center,
                 // Purely decorative — must not steal taps from a spot pill
                 // directly underneath when the user is standing on it.
-                child: const IgnorePointer(child: UserMarker()),
+                child: IgnorePointer(
+                  child: UserMarker(photoUrl: userPhotoUrl, initial: userInitial),
+                ),
               ),
             ],
           ),

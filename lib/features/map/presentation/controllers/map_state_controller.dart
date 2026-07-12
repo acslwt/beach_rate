@@ -48,6 +48,7 @@ class MapStateController extends ChangeNotifier {
   String? selectedSpotName;
   Timer? _spotDebounce;
   StreamSubscription<List<MapSpot>>? _communitySpotsSub;
+  StreamSubscription<Position>? _positionSub;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
   Future<void> init() async {
@@ -75,6 +76,7 @@ class MapStateController extends ChangeNotifier {
     _searchDebounce?.cancel();
     _spotDebounce?.cancel();
     _communitySpotsSub?.cancel();
+    _positionSub?.cancel();
     super.dispose();
   }
 
@@ -96,6 +98,7 @@ class MapStateController extends ChangeNotifier {
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       _finishLocating(LatLng(pos.latitude, pos.longitude));
+      _startLiveTracking();
     } catch (_) {
       _finishLocating(null);
     }
@@ -111,6 +114,29 @@ class MapStateController extends ChangeNotifier {
         mapController.move(loc, 15.0);
       });
     }
+  }
+
+  /// Keeps [userLocation] following the device in real time. Deliberately
+  /// does *not* re-center the camera on every fix (unlike the initial
+  /// [_finishLocating] move) — the marker moves on its own, the user keeps
+  /// free control of pan/zoom, same as any standard "my location" dot.
+  void _startLiveTracking() {
+    _positionSub?.cancel();
+    _positionSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: kLocationDistanceFilterMeters,
+      ),
+    ).listen(
+      (pos) {
+        userLocation = LatLng(pos.latitude, pos.longitude);
+        notifyListeners();
+      },
+      onError: (_) {
+        // Stream died (e.g. permission revoked mid-session) — keep the last
+        // known position rather than clearing it.
+      },
+    );
   }
 
   // ── Search ───────────────────────────────────────────────────────────────────
