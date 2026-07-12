@@ -11,16 +11,19 @@ import '../../domain/entities/map_spot.dart';
 import '../../domain/entities/place.dart';
 import '../../domain/usecases/fetch_spots_in_view.dart';
 import '../../domain/usecases/search_places.dart';
+import '../../domain/usecases/watch_community_spots.dart';
 
 class MapStateController extends ChangeNotifier {
   MapStateController({
     required this._searchPlaces,
     required this._fetchSpotsInView,
+    required this._watchCommunitySpots,
     this._styleLoader = const VectorStyleLoader(),
   });
 
   final SearchPlaces _searchPlaces;
   final FetchSpotsInView _fetchSpotsInView;
+  final WatchCommunitySpots _watchCommunitySpots;
   final VectorStyleLoader _styleLoader;
 
   // ── Map ─────────────────────────────────────────────────────────────────────
@@ -39,13 +42,20 @@ class MapStateController extends ChangeNotifier {
   Timer? _searchDebounce;
 
   // ── Spots ────────────────────────────────────────────────────────────────────
-  List<MapSpot> mapSpots = [];
+  List<MapSpot> _overpassSpots = [];
+  List<MapSpot> _communitySpots = [];
+  List<MapSpot> get mapSpots => [..._overpassSpots, ..._communitySpots];
   String? selectedSpotName;
   Timer? _spotDebounce;
+  StreamSubscription<List<MapSpot>>? _communitySpotsSub;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
   Future<void> init() async {
     unawaited(_loadMapStyle());
+    _communitySpotsSub = _watchCommunitySpots().listen((spots) {
+      _communitySpots = spots;
+      notifyListeners();
+    });
     await fetchLocation();
   }
 
@@ -64,6 +74,7 @@ class MapStateController extends ChangeNotifier {
     mapController.dispose();
     _searchDebounce?.cancel();
     _spotDebounce?.cancel();
+    _communitySpotsSub?.cancel();
     super.dispose();
   }
 
@@ -175,8 +186,8 @@ class MapStateController extends ChangeNotifier {
         north: bounds.north,
         east:  bounds.east,
       );
-      mapSpots = spots;
-      if (!spots.any((s) => s.name == selectedSpotName)) {
+      _overpassSpots = spots;
+      if (!mapSpots.any((s) => s.name == selectedSpotName)) {
         selectedSpotName = null;
       }
       notifyListeners();

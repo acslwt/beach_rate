@@ -38,3 +38,13 @@ const Color appMarkerInk  = Color(0xFF3B3960);
 const Color appLavender = Color(0xFFC9C6EE); // logged-in border & avatar bg
 const Color appMossText = Color(0xFF5C6150); // secondary button text
 const Color appMascotBg = Color(0xFFE9EED9); // mascot circle bg
+
+// ── Affluence levels (0 = vide → 5 = saturée) ────────────────────────────────
+const List<Color> appAffluenceLevelColors = [
+  Color(0xFF2FA76B), // 0 · vide
+  Color(0xFF6BBE6B), // 1 · très faible
+  Color(0xFFA9C94A), // 2 · faible
+  Color(0xFFE59B36), // 3 · moyenne
+  Color(0xFFE0786C), // 4 · forte
+  Color(0xFFD1483C), // 5 · saturée
+];

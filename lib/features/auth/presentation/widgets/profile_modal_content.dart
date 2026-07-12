@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/primary_button.dart';
 import '../controllers/auth_controller.dart';
 import 'mascot_widget.dart';
 
@@ -11,17 +12,21 @@ class ProfileModalContent extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onClose,
+    this.points = 0,
   });
 
   final AuthController controller;
   final VoidCallback onClose;
+
+  /// Affluence points earned by the user, shown next to Favoris/Visites.
+  final int points;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) => controller.loggedIn
-          ? _ConnectedCard(controller: controller, onClose: onClose)
+          ? _ConnectedCard(controller: controller, onClose: onClose, points: points)
           : _DisconnectedCard(controller: controller),
     );
   }
@@ -130,14 +135,14 @@ class _IdleBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        _ActionButton(
+        PrimaryButton(
           label: 'Se connecter',
           backgroundColor: appFmGreen,
           textColor: Colors.white,
           onTap: onLogin,
         ),
         const SizedBox(height: 10),
-        _ActionButton(
+        PrimaryButton(
           label: 'Créer un compte',
           backgroundColor: appClearBg,
           textColor: appMossText,
@@ -232,7 +237,7 @@ class _FormBody extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 20),
-        _ActionButton(
+        PrimaryButton(
           label: _isLogin ? 'Se connecter' : 'Créer mon compte',
           backgroundColor: appFmGreen,
           textColor: Colors.white,
@@ -268,10 +273,15 @@ class _LoadingBody extends StatelessWidget {
 // ── Connected ─────────────────────────────────────────────────────────────────
 
 class _ConnectedCard extends StatelessWidget {
-  const _ConnectedCard({required this.controller, required this.onClose});
+  const _ConnectedCard({
+    required this.controller,
+    required this.onClose,
+    required this.points,
+  });
 
   final AuthController controller;
   final VoidCallback onClose;
+  final int points;
 
   @override
   Widget build(BuildContext context) {
@@ -317,10 +327,18 @@ class _ConnectedCard extends StatelessWidget {
                   valueColor: appWarmOrange,
                 ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatCard(
+                  label: 'Points',
+                  value: '$points',
+                  valueColor: appCoral,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
-          _ActionButton(
+          PrimaryButton(
             label: 'Se déconnecter',
             backgroundColor: appClearBg,
             textColor: appMossText,
@@ -581,47 +599,6 @@ class _StatCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.label,
-    required this.backgroundColor,
-    required this.textColor,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color backgroundColor;
-  final Color textColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: GoogleFonts.fredoka(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

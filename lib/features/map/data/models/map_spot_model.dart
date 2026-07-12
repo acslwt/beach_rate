@@ -4,6 +4,7 @@ import '../../domain/entities/map_spot.dart';
 
 class MapSpotModel extends MapSpot {
   const MapSpotModel({
+    required super.id,
     required super.name,
     required super.location,
     required super.type,
@@ -42,6 +43,10 @@ class MapSpotModel extends MapSpot {
     }
     if (lat == null || lon == null) return null;
 
+    final osmType = element['type'] as String?;
+    final osmId = element['id'];
+    if (osmType == null || osmId == null) return null;
+
     final name = (tags['name'] as String?) ??
         switch (type) {
           SpotType.beach => 'Plage',
@@ -51,6 +56,7 @@ class MapSpotModel extends MapSpot {
         };
 
     return MapSpotModel(
+      id: '$osmType/$osmId',
       name: name,
       location: LatLng(lat, lon),
       type: type,
