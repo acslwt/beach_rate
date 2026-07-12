@@ -17,11 +17,16 @@ class MapView extends StatelessWidget {
     required this.controller,
     required this.onTap,
     required this.onPositionChanged,
+    this.liveLevelForSpot,
   });
 
   final MapStateController controller;
   final void Function(TapPosition, LatLng) onTap;
   final void Function(MapCamera, bool) onPositionChanged;
+
+  /// Looks up the live affluence level (0-5) for a spot id, when available.
+  /// Kept as an injected callback so this feature doesn't depend on `affluence`.
+  final double? Function(String spotId)? liveLevelForSpot;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +56,11 @@ class MapView extends StatelessWidget {
         ),
         MarkerLayer(
           markers: controller.mapSpots.map((spot) {
-            final size = SpotMarker.zoneSize(spot.crowd) + 24;
+            final liveLevel = liveLevelForSpot?.call(spot.id);
+            final zoneSize = liveLevel != null
+                ? SpotMarker.zoneSizeForLevel(liveLevel)
+                : SpotMarker.zoneSize(spot.crowd);
+            final size = zoneSize + 24;
             return Marker(
               point: spot.location,
               width: size,
@@ -61,6 +70,7 @@ class MapView extends StatelessWidget {
                 spot: spot,
                 selected: controller.selectedSpotName == spot.name,
                 onTap: () => controller.toggleSpot(spot.name),
+                liveLevel: liveLevel,
               ),
             );
           }).toList(),

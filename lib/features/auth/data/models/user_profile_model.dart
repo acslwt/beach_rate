@@ -3,6 +3,7 @@ import '../../domain/entities/user_profile.dart';
 
 class UserProfileModel extends UserProfile {
   const UserProfileModel({
+    required super.uid,
     required super.firstName,
     required super.email,
     super.favorites,
@@ -14,6 +15,6 @@ class UserProfileModel extends UserProfile {
     final firstName = displayName.isNotEmpty
         ? displayName.split(' ').first
         : user.email?.split('@').first ?? 'Utilisateur';
-    return UserProfileModel(firstName: firstName, email: user.email ?? '');
+    return UserProfileModel(uid: user.uid, firstName: firstName, email: user.email ?? '');
   }
 }

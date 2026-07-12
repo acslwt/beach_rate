@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -17,11 +18,17 @@ class SpotMarker extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Live affluence level (0-5) reported by users, when available. Overrides
+  /// the static [CrowdLevel] styling. `null` means no recent data yet, in
+  /// which case the marker falls back to its previous static appearance.
+  final double? liveLevel;
+
   const SpotMarker({
     super.key,
     required this.spot,
     required this.selected,
     required this.onTap,
+    this.liveLevel,
   });
 
   static _SpotStyle _styleFor(CrowdLevel crowd) => switch (crowd) {
@@ -30,15 +37,38 @@ class SpotMarker extends StatelessWidget {
     CrowdLevel.busy   => const _SpotStyle(120, Color(0x52E88678), Color(0xA3E88678), appCrowdRed),
   };
 
+  static _SpotStyle _styleForLevel(double level) {
+    final t = (level / 5.0).clamp(0.0, 1.0);
+    final color = _colorForLevel(level);
+    final size = ui.lerpDouble(70, 130, t)!;
+    return _SpotStyle(size, color.withValues(alpha: 0.32), color.withValues(alpha: 0.64), color);
+  }
+
+  static Color _colorForLevel(double level) {
+    final clamped = level.clamp(0.0, 5.0);
+    final lower = clamped.floor().clamp(0, 4);
+    final upper = (lower + 1).clamp(0, 5);
+    final t = clamped - lower;
+    return Color.lerp(
+      appAffluenceLevelColors[lower],
+      appAffluenceLevelColors[upper],
+      t,
+    )!;
+  }
+
   static double zoneSize(CrowdLevel crowd) => switch (crowd) {
     CrowdLevel.calm   => 78.0,
     CrowdLevel.medium => 98.0,
     CrowdLevel.busy   => 120.0,
   };
 
+  static double zoneSizeForLevel(double level) =>
+      ui.lerpDouble(70, 130, (level / 5.0).clamp(0.0, 1.0))!;
+
   @override
   Widget build(BuildContext context) {
-    final s = _styleFor(spot.crowd);
+    final level = liveLevel;
+    final s = level != null ? _styleForLevel(level) : _styleFor(spot.crowd);
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.none,

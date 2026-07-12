@@ -1,10 +1,12 @@
 class UserProfile {
+  final String uid;
   final String firstName;
   final String email;
   final int favorites;
   final int visits;
 
   const UserProfile({
+    required this.uid,
     required this.firstName,
     required this.email,
     this.favorites = 0,
