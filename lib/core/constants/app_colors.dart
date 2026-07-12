@@ -22,6 +22,9 @@ const Color appClearIcon    = Color(0xFF7A8169);
 const Color appSectionHead  = Color(0xFFA7AD95);
 const Color appSuggHover    = Color(0xFFF5F6EC);
 
+// ── Map ───────────────────────────────────────────────────────────────────────
+const Color appMapBackground = Color(0xFFE9EED9); // shown while tiles load
+
 // ── Crowd indicators ─────────────────────────────────────────────────────────
 const Color appCrowdGreen  = Color(0xFF2FA76B);
 const Color appCrowdOrange = Color(0xFFE59B36);
@@ -30,3 +33,8 @@ const Color appCrowdRed    = Color(0xFFE0786C);
 // ── User marker ───────────────────────────────────────────────────────────────
 const Color appMarkerRing = Color(0xFF9C97E6);
 const Color appMarkerInk  = Color(0xFF3B3960);
+
+// ── Auth / profile ────────────────────────────────────────────────────────────
+const Color appLavender = Color(0xFFC9C6EE); // logged-in border & avatar bg
+const Color appMossText = Color(0xFF5C6150); // secondary button text
+const Color appMascotBg = Color(0xFFE9EED9); // mascot circle bg
