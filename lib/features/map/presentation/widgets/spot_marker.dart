@@ -115,12 +115,21 @@ class SpotMarker extends StatelessWidget {
                     decoration: BoxDecoration(shape: BoxShape.circle, color: s.dot),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    spot.name,
-                    style: GoogleFonts.nunito(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: appFmDark,
+                  // The pill sits inside a fixed-size flutter_map Marker
+                  // (zoneSize + 24) — a long real place name (e.g. "Les
+                  // Orpelières") can easily exceed that, so it must be able
+                  // to shrink and ellipsize instead of overflowing.
+                  Flexible(
+                    child: Text(
+                      spot.name,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.nunito(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: appFmDark,
+                      ),
                     ),
                   ),
                 ],
