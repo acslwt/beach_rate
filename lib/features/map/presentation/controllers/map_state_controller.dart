@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../data/datasources/vector_style_loader.dart';
 import '../../domain/entities/map_spot.dart';
 import '../../domain/entities/place.dart';
 import '../../domain/usecases/fetch_spots_in_view.dart';
@@ -14,16 +16,19 @@ class MapStateController extends ChangeNotifier {
   MapStateController({
     required this._searchPlaces,
     required this._fetchSpotsInView,
+    this._styleLoader = const VectorStyleLoader(),
   });
 
   final SearchPlaces _searchPlaces;
   final FetchSpotsInView _fetchSpotsInView;
+  final VectorStyleLoader _styleLoader;
 
   // ── Map ─────────────────────────────────────────────────────────────────────
   final mapController = MapController();
   LatLng center = kDefaultCenter;
   LatLng? userLocation;
   bool isLocating = true;
+  Style? mapStyle;
 
   // ── Activity bar ─────────────────────────────────────────────────────────────
   int? selectedActivity;
@@ -40,7 +45,18 @@ class MapStateController extends ChangeNotifier {
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
   Future<void> init() async {
+    unawaited(_loadMapStyle());
     await fetchLocation();
+  }
+
+  Future<void> _loadMapStyle() async {
+    try {
+      mapStyle = await _styleLoader.load();
+    } catch (_) {
+      // Left null — MapView keeps showing its loading state; a map move
+      // will not retry, but the next app launch will.
+    }
+    notifyListeners();
   }
 
   @override

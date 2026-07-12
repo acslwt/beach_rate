@@ -22,6 +22,9 @@ const Color appClearIcon    = Color(0xFF7A8169);
 const Color appSectionHead  = Color(0xFFA7AD95);
 const Color appSuggHover    = Color(0xFFF5F6EC);
 
+// ── Map ───────────────────────────────────────────────────────────────────────
+const Color appMapBackground = Color(0xFFE9EED9); // shown while tiles load
+
 // ── Crowd indicators ─────────────────────────────────────────────────────────
 const Color appCrowdGreen  = Color(0xFF2FA76B);
 const Color appCrowdOrange = Color(0xFFE59B36);

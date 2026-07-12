@@ -40,7 +40,8 @@ dependencies:
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.0
   google_sign_in: ^6.2.1
-
+  vector_map_tiles: 9.0.0-beta.8
+  vector_tile_renderer: 6.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -65,6 +66,7 @@ flutter:
 
   assets:
     - moi.png
+    - assets/map_style/playful_light.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import '../../../../core/constants/app_constants.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../controllers/map_state_controller.dart';
 import '../widgets/spot_marker.dart';
 import '../widgets/user_marker.dart';
+
+const _mapAttributions = [
+  TextSourceAttribution('OpenStreetMap contributors'),
+];
 
 class MapView extends StatelessWidget {
   const MapView({
@@ -20,20 +25,29 @@ class MapView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = controller.mapStyle;
+    if (style == null) {
+      return const ColoredBox(
+        color: appMapBackground,
+        child: Center(child: CircularProgressIndicator(color: appCoral)),
+      );
+    }
+
     return FlutterMap(
       mapController: controller.mapController,
       options: MapOptions(
         initialCenter: controller.center,
         initialZoom: 15.0,
         interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
+        backgroundColor: appMapBackground,
         onTap: onTap,
         onPositionChanged: onPositionChanged,
       ),
       children: [
-        TileLayer(
-          urlTemplate: kOsmTileTemplate,
-          userAgentPackageName: kOsmPackageName,
-          maxZoom: 19,
+        VectorTileLayer(
+          theme: style.theme,
+          sprites: style.sprites,
+          tileProviders: style.providers,
         ),
         MarkerLayer(
           markers: controller.mapSpots.map((spot) {
@@ -63,6 +77,7 @@ class MapView extends StatelessWidget {
               ),
             ],
           ),
+        const RichAttributionWidget(attributions: _mapAttributions),
       ],
     );
   }
