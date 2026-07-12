@@ -64,5 +64,26 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
+
+    // Commentaires libres postés sur un spot. Publics en lecture pour les
+    // connectés, immuables une fois créés (pas d'édition/suppression pour
+    // l'instant — même choix que les signalements d'affluence).
+    match /spot_comments/{zoneId} {
+      allow read: if true;
+      allow write: if false;
+
+      match /comments/{commentId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.userName is string
+          && request.resource.data.userName.size() > 0
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 300
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
   }
 }

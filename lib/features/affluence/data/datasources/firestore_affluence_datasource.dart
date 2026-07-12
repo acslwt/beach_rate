@@ -1,14 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/user_points_service.dart';
-
-/// `MapSpot.id`/`NearbySpot.id` look like `"node/123456"` — the `/` is part
-/// of the OSM id and is meaningful for the app, but Firestore's `.doc(path)`
-/// treats `/` as a path separator, which turns a single document id into a
-/// multi-segment path and trips the SDK's `isDocument()` assertion. This is
-/// the one place that mapping happens, so every Firestore document built
-/// from a zoneId goes through it.
-String firestoreZoneDocId(String zoneId) => zoneId.replaceAll('/', '_');
+import '../../../../core/utils/firestore_ids.dart';
 
 class FirestoreAffluenceDatasource {
   FirestoreAffluenceDatasource(this._firestore, this._pointsService);

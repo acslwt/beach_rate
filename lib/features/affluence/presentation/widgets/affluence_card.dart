@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/relative_time.dart';
 import '../../../../core/widgets/base_card.dart';
 import '../../domain/entities/affluence_level.dart';
 import '../../domain/entities/zone_affluence_stats.dart';
@@ -16,6 +17,7 @@ class AffluenceCard extends StatelessWidget {
     required this.stats,
     required this.onClose,
     required this.onShowHistory,
+    required this.onShowComments,
   });
 
   final String spotName;
@@ -27,6 +29,7 @@ class AffluenceCard extends StatelessWidget {
   final ZoneAffluenceStats? stats;
   final VoidCallback onClose;
   final VoidCallback onShowHistory;
+  final VoidCallback onShowComments;
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +99,7 @@ class AffluenceCard extends StatelessWidget {
           if (s.lastUpdated != null) ...[
             const SizedBox(height: 10),
             Text(
-              'Mis à jour ${_relativeTime(s.lastUpdated!)}',
+              'Mis à jour ${relativeTime(s.lastUpdated!)}',
               style: GoogleFonts.nunito(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
@@ -105,25 +108,16 @@ class AffluenceCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          GestureDetector(
+          _LinkRow(
+            icon: Icons.bar_chart_rounded,
+            label: 'Voir l\'historique par heure',
             onTap: onShowHistory,
-            behavior: HitTestBehavior.opaque,
-            child: Row(
-              children: [
-                const Icon(Icons.bar_chart_rounded, size: 16, color: appCoral),
-                const SizedBox(width: 6),
-                Text(
-                  'Voir l\'historique par heure',
-                  style: GoogleFonts.nunito(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                    color: appCoral,
-                  ),
-                ),
-                const Spacer(),
-                const Icon(Icons.chevron_right_rounded, size: 18, color: appCoral),
-              ],
-            ),
+          ),
+          const SizedBox(height: 8),
+          _LinkRow(
+            icon: Icons.chat_bubble_outline_rounded,
+            label: 'Voir les commentaires',
+            onTap: onShowComments,
           ),
           const SizedBox(height: 8),
           SelectableText(
@@ -281,10 +275,34 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
-String _relativeTime(DateTime time) {
-  final diff = DateTime.now().difference(time);
-  if (diff.inMinutes < 1) return 'à l\'instant';
-  if (diff.inMinutes < 60) return 'il y a ${diff.inMinutes} min';
-  if (diff.inHours < 24) return 'il y a ${diff.inHours} h';
-  return 'il y a ${diff.inDays} j';
+class _LinkRow extends StatelessWidget {
+  const _LinkRow({required this.icon, required this.label, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: appCoral),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.nunito(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: appCoral,
+            ),
+          ),
+          const Spacer(),
+          const Icon(Icons.chevron_right_rounded, size: 18, color: appCoral),
+        ],
+      ),
+    );
+  }
 }
