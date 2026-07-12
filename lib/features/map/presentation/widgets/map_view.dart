@@ -83,7 +83,9 @@ class MapView extends StatelessWidget {
                 width: 90,
                 height: 140,
                 alignment: Alignment.center,
-                child: const UserMarker(),
+                // Purely decorative — must not steal taps from a spot pill
+                // directly underneath when the user is standing on it.
+                child: const IgnorePointer(child: UserMarker()),
               ),
             ],
           ),
