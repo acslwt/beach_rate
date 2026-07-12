@@ -132,7 +132,11 @@ class MapStateController extends ChangeNotifier {
 
   Future<void> _doSearch(String query) async {
     try {
-      final results = await _searchPlaces(query);
+      // Prefer real GPS; fall back to wherever the user is currently
+      // looking at the map so results are still biased toward *something*
+      // when location isn't available.
+      final near = userLocation ?? mapController.camera.center;
+      final results = await _searchPlaces(query, near: near);
       places = results;
     } catch (_) {
       places = [];
