@@ -3,6 +3,20 @@ import 'package:latlong2/latlong.dart';
 const LatLng kDefaultCenter = LatLng(48.8566, 2.3522);
 const String kNominatimUserAgent = 'PlageApp/1.0 (com.example.plage_review)';
 
+/// Half-width (degrees) of the soft viewbox sent to Nominatim to bias search
+/// results toward the user — ~1.5° is roughly 150km, wide enough that a real
+/// nearby match outside a tighter box still comes back (it's a preference,
+/// not a hard filter: no `bounded=1`).
+const double kSearchProximityBiasDegrees = 1.5;
+
+/// How many results to fetch from Nominatim before sorting by distance and
+/// trimming to the displayed count — a bigger pool means the nearest match
+/// is less likely to be sorted-away by simply not having been fetched.
+const int kSearchFetchLimit = 8;
+
+/// How many results are actually shown after sorting by proximity.
+const int kSearchDisplayLimit = 5;
+
 const List<String> kOverpassMirrors = [
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
   'https://overpass-api.de/api/interpreter',
