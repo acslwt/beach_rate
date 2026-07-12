@@ -32,6 +32,17 @@ class AffluenceRepositoryImpl implements AffluenceRepository {
   }
 
   @override
+  Stream<Map<String, HourlyAffluenceStat>> watchWeeklyProfile(String zoneId) {
+    return _datasource.watchAllHourlyStats(zoneId).map((snapshot) {
+      final profile = <String, HourlyAffluenceStat>{};
+      for (final doc in snapshot.docs) {
+        profile[doc.id] = HourlyAffluenceStatModel.fromDoc(doc);
+      }
+      return profile;
+    });
+  }
+
+  @override
   Future<DateTime?> lastReportTime(String zoneId, String userId) async {
     final snapshot = await _datasource.lastReportForUser(zoneId, userId);
     if (snapshot.docs.isEmpty) return null;

@@ -21,15 +21,17 @@ class FirestoreAffluenceDatasource {
       .doc(firestoreZoneDocId(zoneId))
       .collection('reports');
 
+  CollectionReference<Map<String, dynamic>> _hourlyStats(String zoneId) =>
+      _firestore
+          .collection('affluence_zones')
+          .doc(firestoreZoneDocId(zoneId))
+          .collection('hourly_stats');
+
   DocumentReference<Map<String, dynamic>> _hourlyStatDoc(
     String zoneId,
     String bucketKey,
   ) =>
-      _firestore
-          .collection('affluence_zones')
-          .doc(firestoreZoneDocId(zoneId))
-          .collection('hourly_stats')
-          .doc(bucketKey);
+      _hourlyStats(zoneId).doc(bucketKey);
 
   Stream<QuerySnapshot<Map<String, dynamic>>> watchRecentReports(
     String zoneId,
@@ -46,6 +48,12 @@ class FirestoreAffluenceDatasource {
     String bucketKey,
   ) =>
       _hourlyStatDoc(zoneId, bucketKey).get();
+
+  /// All buckets for a zone at once — at most 7 * (24 / bucket size) docs
+  /// (84 with the default 2h buckets), cheap enough to fetch in one shot
+  /// rather than querying per weekday.
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchAllHourlyStats(String zoneId) =>
+      _hourlyStats(zoneId).snapshots();
 
   Future<QuerySnapshot<Map<String, dynamic>>> lastReportForUser(
     String zoneId,

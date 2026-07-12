@@ -10,6 +10,11 @@ abstract interface class AffluenceRepository {
   /// into, or `null` if that bucket has no data yet.
   Future<HourlyAffluenceStat?> getHourlyStat(String zoneId, DateTime at);
 
+  /// Every historical bucket for [zoneId], keyed by `"weekday_hourBucket"`
+  /// (see [kAffluenceHourBucketSize]) — the full week's profile, updated
+  /// live. Missing keys mean that bucket has no data yet.
+  Stream<Map<String, HourlyAffluenceStat>> watchWeeklyProfile(String zoneId);
+
   /// When [userId] last reported on [zoneId], or `null` if never — used to
   /// show the cooldown state before the user attempts to submit.
   Future<DateTime?> lastReportTime(String zoneId, String userId);

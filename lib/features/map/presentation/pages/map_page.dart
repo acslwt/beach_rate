@@ -39,9 +39,11 @@ import '../../../affluence/data/datasources/firestore_affluence_datasource.dart'
 import '../../../affluence/data/repositories/affluence_repository_impl.dart';
 import '../../../affluence/domain/entities/nearby_spot.dart';
 import '../../../affluence/domain/usecases/submit_affluence_report.dart';
+import '../../../affluence/domain/usecases/watch_weekly_affluence_profile.dart';
 import '../../../affluence/domain/usecases/watch_zone_affluence.dart';
 import '../../../affluence/presentation/controllers/affluence_controller.dart';
 import '../../../affluence/presentation/widgets/affluence_card.dart';
+import '../../../affluence/presentation/widgets/affluence_history_chart.dart';
 import '../../../affluence/presentation/widgets/report_affluence_button.dart';
 
 const List<CoolSpot> _kCoolSpots = [
@@ -87,6 +89,7 @@ class _MapPageState extends State<MapPage> {
   late final AffluenceController _affluenceCtrl;
   late final UserPointsService _pointsService;
   late final CreateCommunitySpot _createCommunitySpot;
+  late final WatchWeeklyAffluenceProfile _watchWeeklyAffluenceProfile;
   final _points = ValueNotifier<int>(0);
   StreamSubscription<int>? _pointsSub;
   final _searchCtrl  = TextEditingController();
@@ -132,6 +135,7 @@ class _MapPageState extends State<MapPage> {
       submitAffluenceReport: SubmitAffluenceReport(affluenceRepository),
       watchZoneAffluence: WatchZoneAffluence(affluenceRepository),
     );
+    _watchWeeklyAffluenceProfile = WatchWeeklyAffluenceProfile(affluenceRepository);
 
     _searchFocus.addListener(
       () => setState(() => _searchFocused = _searchFocus.hasFocus),
@@ -204,6 +208,18 @@ class _MapPageState extends State<MapPage> {
       (ctx) => AddSpotForm(
         loggedIn: _authCtrl.loggedIn,
         onSubmit: _submitNewSpot,
+        onClose: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
+  void _showHistoryChart(MapSpot spot) {
+    showAppModal(
+      context,
+      (ctx) => AffluenceHistoryChart(
+        spotName: spot.name,
+        zoneId: spot.id,
+        watchWeeklyProfile: _watchWeeklyAffluenceProfile,
         onClose: () => Navigator.of(ctx).pop(),
       ),
     );
@@ -283,6 +299,7 @@ class _MapPageState extends State<MapPage> {
                   zoneId: firestoreZoneDocId(selectedSpot.id),
                   stats: _affluenceCtrl.statsForZone(selectedSpot.id),
                   onClose: _ctrl.clearSelectedSpot,
+                  onShowHistory: () => _showHistoryChart(selectedSpot),
                 ),
                 const SizedBox(height: 10),
               ],
